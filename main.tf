@@ -1,87 +1,45 @@
-provider "digitalocean" {
-    token = "${var.do_token}"
+provider "azurerm" { }
+
+resource "azurerm_resource_group" "jmeter" {
+  name     = "${var.cluster_name}"
+  location = "${var.region}"
 }
 
-# Generate a random list of regions
-resource "random_shuffle" "regions" {
-    input = ["${var.allowed_regions}"]
-    result_count = "${var.slave_count + 1}"
+resource "azurerm_virtual_network" "jmeter" {
+  name                = "${var.cluster_name}-vn"
+  address_space       = ["10.0.0.0/16"]
+  location            = "${azurerm_resource_group.jmeter.location}"
+  resource_group_name = "${azurerm_resource_group.jmeter.name}"
 }
 
-# Add a new public key for JMeter
-resource "digitalocean_ssh_key" "jmeter" {
-    name = "JMeter"
-    public_key = "${file(var.public_key)}"
+resource "azurerm_subnet" "jmeter" {
+  name                 = "${var.cluster_name}-sub"
+  resource_group_name  = "${azurerm_resource_group.jmeter.name}"
+  virtual_network_name = "${azurerm_virtual_network.jmeter.name}"
+  address_prefix       = "10.0.2.0/24"
 }
 
-# JMeter slaves
-resource "digitalocean_droplet" "jmeter_slave" {
-    count = "${var.slave_count}"
-    image = "ubuntu-14-04-x64"
-    name = "jmeter.slave.${count.index}"
-    region = "${random_shuffle.regions.result[count.index + 1]}"
-    size = "${var.slave_size}"
-    ssh_keys = ["${digitalocean_ssh_key.jmeter.id}"]
-
-    connection {
-        user = "root"
-        type = "ssh"
-        private_key = "${file(var.private_key)}"
-        timeout = "2m"
-        agent = false
-    }
-
-    provisioner "remote-exec" {
-        script = "resources/install.sh"
-    }
-
-    provisioner "file" {
-        source = "resources/init"
-        destination = "/etc/init.d/jmeter"
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "sed -i -e 's/JMETER_IP=.*/JMETER_IP=${self.ipv4_address}/g' /etc/init.d/jmeter",
-            "chmod +x /etc/init.d/jmeter",
-            "/etc/init.d/jmeter start",
-            "sleep 2" # see http://stackoverflow.com/questions/36207752/how-can-i-start-a-remote-service-using-terraform-provisioning
-        ]
-    }
+resource "azurerm_public_ip" "jmeter" {
+  name                         = "${var.cluster_name}-public-lb"
+  location                     = "${azurerm_resource_group.jmeter.location}"
+  resource_group_name          = "${azurerm_resource_group.jmeter.name}"
+  public_ip_address_allocation = "dynamic"
 }
 
-output "slave_addresses" {
-    value = ["${digitalocean_droplet.jmeter_slave.*.ipv4_address}"]
+resource "azurerm_lb" "jmeter" {
+  name                = "${var.cluster_name}-lb"
+  location            = "${azurerm_resource_group.jmeter.location}"
+  resource_group_name = "${azurerm_resource_group.jmeter.name}"
+
+  frontend_ip_configuration {
+    name                 = "${var.cluster_name}-public-ip"
+    public_ip_address_id = "${azurerm_public_ip.jmeter.id}"
+  }
 }
 
-# JMeter master
-resource "digitalocean_droplet" "jmeter_master" {
-    image = "ubuntu-14-04-x64"
-    name = "jmeter.master"
-    region = "${random_shuffle.regions.result[0]}"
-    size = "${var.master_size}"
-    ssh_keys = ["${digitalocean_ssh_key.jmeter.id}"]
-
-    connection {
-        user = "root"
-        type = "ssh"
-        private_key = "${file(var.private_key)}"
-        timeout = "2m"
-        agent = false
-    }
-
-    provisioner "remote-exec" {
-        script = "resources/install.sh"
-    }
-
-    provisioner "remote-exec" {
-        inline = [
-            "sed -i -e 's/remote_hosts=.*/remote_hosts=${join(",", digitalocean_droplet.jmeter_slave.*.ipv4_address)}/g' /opt/jmeter/bin/jmeter.properties",
-            "sed -i -e '/127.0.1.1.*/d' /etc/hosts"
-        ]
-    }
+resource "azurerm_lb_backend_address_pool" "jmeter" {
+  resource_group_name = "${azurerm_resource_group.jmeter.name}"
+  loadbalancer_id     = "${azurerm_lb.jmeter.id}"
+  name                = "${var.cluster_name}-backend-pool"
 }
 
-output "master_address" {
-    value = "${digitalocean_droplet.jmeter_master.ipv4_address}"
-}

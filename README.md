@@ -24,7 +24,6 @@ To create test plans locally, you should [install JMeter](http://jmeter.apache.o
 ### TL;DR
 
 ``` bash
-$ ./scripts/setup.sh DIGITAL_OCEAN_TOKEN
 $ terraform apply
 $ ./scripts/run.sh path/to/test.jmx path/to/save/results.jtl
 $ terraform destroy
