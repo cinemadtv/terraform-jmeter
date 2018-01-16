@@ -8,7 +8,7 @@ resource "azurerm_network_interface" "jmeter_slave" {
     name                          = "${var.cluster_name}-configuration"
     subnet_id                     = "${azurerm_subnet.jmeter.id}"
     private_ip_address_allocation = "dynamic"
-    load_balancer_backend_address_pools_ids = ["${azurerm_lb_backend_address_pool.jmeter.id}"]
+    public_ip_address_id          = "${element(azurerm_public_ip.jmeter.*.id, count.index)}"
   }
 }
 
@@ -22,18 +22,10 @@ resource "azurerm_managed_disk" "slave_md" {
   disk_size_gb         = "1023"
 }
 
-resource "azurerm_availability_set" "slave_avset" {
-  name                         = "${var.cluster_name}-slave-avset"
-  location                     = "${azurerm_resource_group.jmeter.location}"
-  resource_group_name          = "${azurerm_resource_group.jmeter.name}"
-  managed                      = true
-}
-
 resource "azurerm_virtual_machine" "slave_jmeter" {
   count                 = "${var.slave_count}"
   name                  = "${var.cluster_name}-slave-vm-${count.index}"
   location              = "${azurerm_resource_group.jmeter.location}"
-  availability_set_id   = "${azurerm_availability_set.slave_avset.id}"
   resource_group_name   = "${azurerm_resource_group.jmeter.name}"
   network_interface_ids = ["${element(azurerm_network_interface.jmeter_slave.*.id, count.index)}"]
   vm_size               = "${var.slave_size}"
@@ -60,16 +52,28 @@ resource "azurerm_virtual_machine" "slave_jmeter" {
 
   os_profile {
     computer_name  = "${var.cluster_name}-slave-${count.index}"
-    admin_username = "cinemadtv"
-    admin_password = "quBHD_fc2nm%4M"
+    admin_username = "${var.admin_username}"
   }
 
   os_profile_linux_config {
-    disable_password_authentication = false
+    disable_password_authentication = true
+    ssh_keys = [{
+      path     = "/home/${var.admin_username}/.ssh/authorized_keys"
+      key_data = "${file(var.public_key)}"
+    }]
   }
 
   tags {
     environment = "testing"
+  }
+
+  connection {
+    type = "ssh"
+    host = "cinemadjmeter${count.index}.${var.region}.cloudapp.azure.com"
+    user = "${var.admin_username}"
+    private_key = "${file(var.private_key)}"
+    timeout = "2m"
+    agent = false
   }
 
   provisioner "remote-exec" {
@@ -78,14 +82,16 @@ resource "azurerm_virtual_machine" "slave_jmeter" {
 
   provisioner "file" {
     source = "resources/init"
-    destination = "/etc/init.d/jmeter"
+    destination = "/home/${var.admin_username}/jmeter"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "sed -i -e 's/JMETER_IP=.*/JMETER_IP=${self.private_ip_address}/g' /etc/init.d/jmeter",
-      "chmod +x /etc/init.d/jmeter",
-      "/etc/init.d/jmeter start",
+      "sudo mv /home/${var.admin_username}/jmeter /etc/init.d/jmeter",
+      "sudo sed -i -e 's/JMETER_IP=.*/JMETER_IP=${element(azurerm_network_interface.jmeter_slave.*.private_ip_address, count.index)}/g' /etc/init.d/jmeter",
+      "sudo chmod +x /etc/init.d/jmeter",
+      "sudo update-rc.d jmeter defaults",
+      "sudo /etc/init.d/jmeter start",
       "sleep 2" # see http://stackoverflow.com/questions/36207752/how-can-i-start-a-remote-service-using-terraform-provisioning
     ]
   }

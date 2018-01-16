@@ -3,6 +3,22 @@ variable "cluster_name" {
     default = "jmeter"
 }
 
+variable "public_key" {
+    description = "SSH Public Key"
+    default = ".ssh/jmeter.pub"
+}
+
+variable "private_key" {
+    description = "SSH Private Key"
+    default = ".ssh/jmeter"
+}
+
+
+variable "admin_username" {
+    description = "Admin username"
+    default = "cinemadtv"
+}
+
 variable "slave_count" {
     description = "Number of slaves"
     default = 3
@@ -20,5 +36,5 @@ variable "master_size" {
 
 variable "region" {
     description = "Region"
-    default = "Central US"
+    default = "centralus"
 }
