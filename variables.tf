@@ -16,7 +16,7 @@ variable "private_key" {
 
 variable "admin_username" {
     description = "Admin username"
-    default = "cinemadtv"
+    default = "admin"
 }
 
 variable "slave_count" {

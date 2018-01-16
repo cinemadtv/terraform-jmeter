@@ -1,8 +1,8 @@
 provider "azurerm" {
-  subscription_id = "44fbe376-73e5-4254-b0e4-8907fa31eaf1"
-  client_id       = "757efb9a-66ba-4669-9aa2-c1b0368d726a"
-  client_secret   = "1f7e0aa4-209f-4a03-aa2c-16cb7532a6a3"
-  tenant_id       = "be7194e4-0334-4b3c-bafe-516bf53cdbd0"
+  subscription_id = "${var.subscription_id}"
+  client_id       = "${var.client_id}"
+  client_secret   = "${var.client_secret}"
+  tenant_id       = "${var.tenant_id}"
 }
 
 resource "azurerm_resource_group" "jmeter" {
@@ -30,5 +30,11 @@ resource "azurerm_public_ip" "jmeter" {
   location                     = "${azurerm_resource_group.jmeter.location}"
   resource_group_name          = "${azurerm_resource_group.jmeter.name}"
   public_ip_address_allocation = "dynamic"
-  domain_name_label = "cinemadjmeter${count.index}"
+  domain_name_label = "${var.cluster_name}${count.index}"
+}
+
+
+output "run_user" {
+  # use slave count, since elements are 0-based index
+  value = "${admin_username}"
 }

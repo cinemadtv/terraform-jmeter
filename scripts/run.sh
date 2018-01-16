@@ -3,6 +3,7 @@
 set -e
 
 MASTER=$(terraform output master_address)
+MASTER=$(terraform output run_user)
 
 if [ -z "$1" -o ! -f "$1" ]; then
     echo "Please provide a test file"

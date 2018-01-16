@@ -89,5 +89,5 @@ resource "azurerm_virtual_machine" "master_jmeter" {
 
 output "master_address" {
   # use slave count, since elements are 0-based index
-  value = "cinemadjmeter${var.slave_count}.${var.region}.cloudapp.azure.com"
+  value = "${var.cluster_name}${var.slave_count}.${var.region}.cloudapp.azure.com"
 }

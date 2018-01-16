@@ -69,7 +69,7 @@ resource "azurerm_virtual_machine" "slave_jmeter" {
 
   connection {
     type = "ssh"
-    host = "cinemadjmeter${count.index}.${var.region}.cloudapp.azure.com"
+    host = "${var.cluster_name}${count.index}.${var.region}.cloudapp.azure.com"
     user = "${var.admin_username}"
     private_key = "${file(var.private_key)}"
     timeout = "2m"
