@@ -36,5 +36,5 @@ resource "azurerm_public_ip" "jmeter" {
 
 output "run_user" {
   # use slave count, since elements are 0-based index
-  value = "${admin_username}"
+  value = "${var.admin_username}"
 }

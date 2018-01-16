@@ -1,3 +1,16 @@
+variable "subscription_id" {
+  description = "Azure subscription id"
+}
+variable "client_id" {
+  description = "Azure client id"
+}
+variable "client_secret" {
+  description = "Azure client secret"
+}
+variable "tenant_id" {
+  description = "Azure tenant id"
+}
+
 variable "cluster_name" {
     description = "Cluster name"
     default = "jmeter"
@@ -26,7 +39,7 @@ variable "slave_count" {
 
 variable "slave_size" {
     description = "Size of slaves"
-    default = "Standard_B1ms"
+    default = "Standard_D2s_v3"
 }
 
 variable "master_size" {

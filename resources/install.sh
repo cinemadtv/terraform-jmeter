@@ -11,7 +11,7 @@ cd /tmp
 wget https://www.apache.org/dist/jmeter/binaries/apache-jmeter-3.3.tgz
 wget https://www.apache.org/dist/jmeter/binaries/apache-jmeter-3.3.tgz.md5
 md5sum -c apache-jmeter-3.3.tgz.md5
-sudo rm -rf /usr/share/jmeter
-sudo mkdir -p /usr/share/jmeter
-sudo tar -xf apache-jmeter-3.3.tgz -C /usr/share/jmeter --strip-components=1
+sudo rm -rf /opt/jmeter
+sudo mkdir -p /opt/jmeter
+sudo tar -xf apache-jmeter-3.3.tgz -C /opt/jmeter --strip-components=1
 sudo rm -rf apache-jmeter-3.3.tgz*
